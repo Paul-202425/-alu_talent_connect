@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStudent() {
+      return isSignedIn() && userDoc().role == 'student';
+    }
+
+    function isStartupFounder() {
+      return isSignedIn() && userDoc().role == 'startup_founder';
+    }
+
+    function ownsStartup(startupId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/startups/$(startupId)).data.founderId == request.auth.uid;
+    }
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['email', 'fullName', 'role', 'createdAt'])
+        && request.resource.data.role in ['student', 'startup_founder'];
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // ── startups ──────────────────────────────────────────────────────────────
+    match /startups/{startupId} {
+      allow read: if isSignedIn();
+      allow create: if isStartupFounder()
+        && request.resource.data.founderId == request.auth.uid;
+      allow update: if ownsStartup(startupId);
+      allow delete: if false;
+    }
+
+    // ── opportunities ─────────────────────────────────────────────────────────
+    match /opportunities/{opportunityId} {
+      allow read: if isSignedIn();
+      allow create: if isStartupFounder()
+        && ownsStartup(request.resource.data.startupId);
+      allow update: if isStartupFounder()
+        && ownsStartup(resource.data.startupId);
+      allow delete: if false;
+    }
+
+    // ── applications ──────────────────────────────────────────────────────────
+    match /applications/{applicationId} {
+      allow read: if isSignedIn() && (
+        resource.data.applicantId == request.auth.uid
+        || ownsStartup(resource.data.startupId)
+      );
+
+      allow create: if isStudent()
+        && request.resource.data.applicantId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && applicationId == request.resource.data.opportunityId + '_' + request.auth.uid;
+
+      allow update: if isSignedIn() && (
+        // Student can withdraw their own application
+        (resource.data.applicantId == request.auth.uid
+          && request.resource.data.status == 'withdrawn')
+        // Startup founder can review applications
+        || (ownsStartup(resource.data.startupId)
+          && request.resource.data.status in ['reviewed', 'accepted', 'rejected'])
+      );
+
+      allow delete: if false;
+    }
+  }
+}

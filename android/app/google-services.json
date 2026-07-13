@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "852379129535",
+    "project_id": "alu-talent-connect-app-be129",
+    "storage_bucket": "alu-talent-connect-app-be129.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:852379129535:android:e5be5067f1074ae7c2180a",
+        "android_client_info": {
+          "package_name": "com.alu.alu_talent_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNOwTnJYQiADnvgPxuQcVAblGESZdAZiA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
